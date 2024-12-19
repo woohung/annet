@@ -7,7 +7,6 @@ from annet.annlib.netdev.views.dump import DumpableView
 from annet.annlib.netdev.views.hardware import HardwareView, lag_name, svi_name
 from annet.storage import Storage
 
-
 @dataclass
 class Entity(DumpableView):
     id: int
@@ -168,7 +167,7 @@ class NetboxDevice(Entity):
 
     display: str
     device_type: DeviceType
-    device_role: Entity
+    # device_role: Entity  # depricated after 4.0, now use role, defined separately in each version 
     tenant: Optional[Entity]
     platform: Optional[Entity]
     serial: str

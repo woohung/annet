@@ -7,9 +7,7 @@ import ssl
 from adaptix import P
 from adaptix.conversion import impl_converter, link, link_constant
 
-
 from annetbox.v37 import models as api_models 
-from annetbox.v37.client_sync import NetboxV37 
 
 from annet.adapters.netbox.common import models
 from annet.adapters.netbox.common.manufacturer import (
@@ -22,11 +20,20 @@ from annet.storage import Storage, Device, Interface
 
 logger = getLogger(__name__)
 
-
 class BaseNetboxStorage(Storage):
-    netbox = NetboxV37 
-    device_model = models.NetboxDevice
+    """
+    Base class for Netbox storage adapters.
+    Attributes:
+        netbox_class: The Netbox class to use for API interactions from Annetbox.
+        api_models: The API models used by the storage from Annetbox.
+        device_model: The model for Netbox devices.
+        prefix_model: The model for Netbox prefixes.
+        interface_model: The model for Netbox interfaces.
+        ipaddress_model: The model for Netbox IP addresses.
+    """
+    netbox_class = None 
     api_models = api_models 
+    device_model = models.NetboxDevice
     prefix_model = models.Prefix
     interface_model = models.Interface
     ipaddress_model = models.IpAddress
@@ -44,9 +51,9 @@ class BaseNetboxStorage(Storage):
             url = opts.url
             token = opts.token
             self.exact_host_filter = opts.exact_host_filter
-        self.netbox = self.netbox(url=url, token=token, ssl_context=ctx)
+        self.netbox = self.netbox_class(url=url, token=token, ssl_context=ctx)
         self._all_fqdns: Optional[list[str]] = None
-        self._initialize_decorators()
+        self._initialize_impl_converter_methods()
 
     def __enter__(self):
         return self
@@ -54,11 +61,7 @@ class BaseNetboxStorage(Storage):
     def __exit__(self, _, __, ___):
         pass
 
-    def _initialize_decorators(self):
-        if self.device_model and self.api_models and self.prefix_model and self.interface_model and self.ipaddress_model:
-            self._apply_converter_decorators()
-
-    def _apply_converter_decorators(self):
+    def _initialize_impl_converter_methods(self):
         @impl_converter(recipe=[
             link(P[self.api_models.Device].name, P[self.device_model].hostname),
             link(P[self.api_models.Device].name, P[self.device_model].fqdn),
@@ -162,7 +165,6 @@ class BaseNetboxStorage(Storage):
             )
             for device in self._load_devices(query)
         }
-        print(device_ids)
         if not device_ids:
             return []
 
